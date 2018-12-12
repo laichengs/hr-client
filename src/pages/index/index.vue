@@ -4,7 +4,7 @@
       <el-row>
         <el-col :span="6">
           <el-form-item label="姓名" size="small" prop="name">
-            <el-input v-model="condition.name" placeholder="姓名"></el-input>
+            <el-input v-model.lazy="condition.name" placeholder="支持模糊搜索（输入即搜）" @input="searchByName"></el-input>
           </el-form-item>
         </el-col>
         <el-col :span="6">
@@ -44,7 +44,35 @@
           </el-form-item>
         </el-col>
       </el-row>
-      <el-button type="primary" icon="el-icon-search" @click="searchTable">查询</el-button>
+      <el-row>
+        <el-col :span="10">
+          <el-form-item label="入职日期" size="small" prop="dateRange">
+            <el-date-picker
+           v-model="condition.dateRange"
+           type="daterange"
+           :picker-options="pickerOptions"
+           range-separator="至"
+           value-format="yyyy-MM-dd"
+           start-placeholder="开始日期"
+           end-placeholder="结束日期">
+         </el-date-picker>
+          </el-form-item>
+        </el-col>
+        <el-col :span="6">
+          <el-form-item>
+            <el-switch
+              v-model="condition.is_on"
+              active-value=""
+              @change="handleIsOn"
+              inactive-value="1"
+              active-text="全部显示"
+              inactive-text="只显示在职">
+            </el-switch>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-button type="primary" icon="el-icon-search" @click="searchByButton" :loading="btnLoading">查询</el-button>
       <el-button icon="el-icon-delete" @click="resetForm">清除筛选条件</el-button>
     </el-form>
     <el-table :data="tableData" v-loading="loading">
@@ -113,17 +141,28 @@
       <el-table-column prop="join_date" label="入职时间" width="100px"></el-table-column>
       <el-table-column prop="is_on" label="是否在职" width="100px">
         <template slot-scope="scope">
-          <span style="margin-left: 10px" v-if="scope.row.marriage"><el-tag>在职</el-tag></span>
+          <span style="margin-left: 10px" v-if="scope.row.is_on==1"><el-tag>在职</el-tag></span>
           <span style="margin-left: 10px" v-else><el-tag type="info">已离职</el-tag></span>
         </template>
       </el-table-column>
       <el-table-column  label="操作">
         <template slot-scope="scope">
           <el-button type="success" icon="el-icon-edit" size="small">编辑</el-button>
-          <!-- <el-button type="success" icon="el-icon-search" size="small">查看更多</el-button> -->
+          <el-button type="danger" icon="el-icon-delete" size="small" @click="deleteUser(scope.row.id)">删除</el-button>
+          <el-button type="warning" icon="el-icon-refresh" size="small" v-if="scope.row.is_on==1" @click="changeIsOn(scope.row.id, scope.row.is_on)">变为离职</el-button>
+          <el-button type="info" icon="el-icon-refresh" size="small" v-else @click="changeIsOn(scope.row.id, scope.row.is_on)">变为在职</el-button>
         </template>
       </el-table-column>
     </el-table>
+    <div class="pagination">
+      <el-pagination
+       @current-change="handleCurrentChange"
+       :current-page="currentPage"
+       :page-size="condition.number"
+       layout="total, prev, pager, next"
+       :total="total">
+     </el-pagination>
+    </div>
   </div>
 </template>
 <script>
@@ -140,25 +179,105 @@ export default{
         sex: '',
         is_on: '',
         start: 0,
-        number: 10
+        number: 5,
+        dateRange: ''
+      },
+      pickerOptions: {
+        shortcuts: [{
+          text: '最近一周',
+          onClick(picker) {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+            picker.$emit('pick', [start, end]);
+          }
+        }, {
+          text: '最近一个月',
+          onClick(picker) {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+            picker.$emit('pick', [start, end]);
+          }
+        }, {
+          text: '最近三个月',
+          onClick(picker) {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
+            picker.$emit('pick', [start, end]);
+          }
+        }]
       },
       tableData: [],
       jobs: [],
+      total: 0,
       departments: [],
       citys: [],
-      loading: true
+      timer: '',
+      currentPage: 1,
+      loading: true,
+      btnLoading: false
     }
   },
   methods: {
+    //监听页码
+    handleCurrentChange(val) {
+      this.condition.start = (val - 1) * this.condition.number;
+      this.searchTable();
+    },
+    //监听是否全部人员
+    handleIsOn(val){
+      console.log(val);
+      this.condition.start = 0;
+      this.searchTable();
+    },
+
+    //更改单个数据状态
+    changeIsOn(id, status){
+      let on = 0;
+      status==1 ? on=0 : on=1;
+      axios.put('/api/user', {
+          id: id,
+          is_on: on
+      }).then(res=>{
+        if(res.data.code == '200'){
+          this.searchTable();
+        }
+      })
+    },
+
+    //查询数据
     searchTable(){
       //获取表格数据
       axios.get('/api/user', {
         params: this.condition
       }).then(res=>{
-        console.log(res);
-        this.tableData = res.data;
+        this.tableData = res.data.rows;
+        this.total = res.data.total;
         this.loading = false;
+        this.btnLoading = false;
       });
+    },
+    searchByButton(){
+      //alert(this.condition.dateRange);
+      this.condition.start = 0;
+      this.searchTable();
+      this.btnLoading = true;
+    },
+    searchByName(){
+        this.condition.start = 0;
+        if(this.timer){
+          clearTimeout(this.timer);
+          this.timer = setTimeout(()=>{
+            this.searchTable();
+          }, 200);
+        }else{
+          this.timer = setTimeout(()=>{
+            clearTimeout(this.timer);
+          }, 200);
+        }
+
     },
     init(){
       //获取城市
@@ -193,7 +312,35 @@ export default{
 
     //重置表单
     resetForm(){
-      this.$ref.condition.resetFields();
+      this.$refs.condition.resetFields();
+      this.searchTable();
+    },
+
+    //删除员工
+    deleteUser(id){
+      this.$confirm('确定删除此用户吗？', '提示', {
+        type: 'warning'
+      })
+      .then(res=>{
+        axios.delete('/api/user', {
+          params: {
+            id: id
+          }
+        })
+        .then(res=>{
+          console.log(res);
+          this.$message({
+            message: '删除成功！',
+            type: 'success'
+          });
+        });
+      })
+      // .catch(res=>{
+      //   this.$message({
+      //     message: '已取消删除',
+      //     type: 'info'
+      //   });
+      // })
     }
   },
   mounted(){
@@ -222,5 +369,11 @@ export default{
   margin-right: 0;
   margin-bottom: 0;
   width: 33%;
+}
+.pagination{
+  width: 100%;
+  height: 50px;
+  display: flex;
+  align-items: center;
 }
 </style>
