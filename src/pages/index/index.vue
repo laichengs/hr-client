@@ -58,7 +58,7 @@
          </el-date-picker>
           </el-form-item>
         </el-col>
-        <el-col :span="6">
+        <el-col :span="10">
           <el-form-item>
             <el-switch
               v-model="condition.is_on"
@@ -129,11 +129,17 @@
             <el-form-item label="现居地">
               <span>{{ scope.row.place }}</span>
             </el-form-item>
+            <el-form-item label="离职日期" v-if="scope.row.is_on !=1">
+              <span>{{ scope.row.leave_date }}</span>
+            </el-form-item>
+            <el-form-item label="离职原因" v-if="scope.row.is_on !=1">
+              <span>{{ scope.row.leave_type }}</span>
+            </el-form-item>
           </el-form>
         </template>
       </el-table-column>
       <el-table-column prop="name" label="姓名" width="100px"></el-table-column>
-      <el-table-column prop="sex" label="性别" width="100px"></el-table-column>
+      <el-table-column prop="sex" label="性别" width="50px"></el-table-column>
       <el-table-column prop="phone" label="手机" width="120px"></el-table-column>
       <el-table-column prop="city.name" label="区域" width="100px"></el-table-column>
       <el-table-column prop="department.title" label="部门" width="100px"  ></el-table-column>
@@ -147,13 +153,14 @@
       </el-table-column>
       <el-table-column  label="操作">
         <template slot-scope="scope">
-          <el-button type="success" icon="el-icon-edit" size="small">编辑</el-button>
+          <el-button type="success" icon="el-icon-edit" size="small" @click="editUser(scope.$index)">编辑</el-button>
           <el-button type="danger" icon="el-icon-delete" size="small" @click="deleteUser(scope.row.id)">删除</el-button>
-          <el-button type="warning" icon="el-icon-refresh" size="small" v-if="scope.row.is_on==1" @click="changeIsOn(scope.row.id, scope.row.is_on)">变为离职</el-button>
-          <el-button type="info" icon="el-icon-refresh" size="small" v-else @click="changeIsOn(scope.row.id, scope.row.is_on)">变为在职</el-button>
+          <el-button type="warning" icon="el-icon-refresh" size="small" v-if="scope.row.is_on==1" @click="changeIsOn(scope.$index)">变为离职</el-button>
+          <el-button type="info" icon="el-icon-refresh" size="small" v-else @click="changeIsOn(scope.$index)">变为在职</el-button>
         </template>
       </el-table-column>
     </el-table>
+    <!-- 分页 -->
     <div class="pagination">
       <el-pagination
        @current-change="handleCurrentChange"
@@ -162,6 +169,45 @@
        layout="total, prev, pager, next"
        :total="total">
      </el-pagination>
+     <!-- 编辑弹框 -->
+     <el-dialog title="员工信息" :visible.sync="editVisible" width="25%">
+       <el-form :model="edit" class="edit">
+         <el-form-item label="姓名" label-width="80px" size="small">
+           <el-input v-model="edit.name" autocomplete="off"></el-input>
+         </el-form-item>
+         <el-form-item label="手机号码" label-width="80px" size="small">
+           <el-input v-model="edit.phone" autocomplete="off"></el-input>
+         </el-form-item>
+         <el-form-item label="区域" label-width="80px" size="small">
+           <el-select v-model="edit.city">
+             <el-option :label="item.name" v-for="(item, index) in citys" selected="" :value="item.id" v-key="index"></el-option>
+           </el-select>
+         </el-form-item>
+       </el-form>
+       <div slot="footer" class="dialog-footer">
+        <el-button @click="editVisible = false">取 消</el-button>
+        <el-button type="primary" @click="editUserData">确 定</el-button>
+      </div>
+      </el-dialog>
+      <!-- 离职弹框 -->
+      <el-dialog title="离职日期" :visible.sync="leaveVisible" width="25%">
+        <el-form :model="edit" style="padding:15px;">
+          <el-form-item label="选择日期" label-width="80px" size="small">
+            <el-date-picker type="date" format="yyyy-MM-DD" v-model="leave_date"></el-date-picker>
+          </el-form-item>
+          <el-form-item label="离职类型" label-width="80px" size="small">
+            <el-select v-model="leave_type" placeholder="请选择离职原因">
+              <el-option label="正常" value="正常"></el-option>
+              <el-option label="自离" value="自离"></el-option>
+              <el-option label="辞退" value="辞退"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+         <el-button @click="leaveVisible = false">取 消</el-button>
+         <el-button type="primary" @click="updateLeaveDate">确 定</el-button>
+       </div>
+       </el-dialog>
     </div>
   </div>
 </template>
@@ -170,6 +216,9 @@ import axios from 'axios'
 export default{
   data(){
     return {
+      edit: {
+        name: ''
+      },
       condition: {
         name: '',
         job: '',
@@ -180,8 +229,12 @@ export default{
         is_on: '',
         start: 0,
         number: 5,
-        dateRange: ''
+        dateRange: '',
       },
+      leave_date: '',
+      leave_type: '',
+      editVisible: false,
+      leaveVisible: false,
       pickerOptions: {
         shortcuts: [{
           text: '最近一周',
@@ -217,7 +270,14 @@ export default{
       timer: '',
       currentPage: 1,
       loading: true,
-      btnLoading: false
+      btnLoading: false,
+      currentIndex: 0,
+      edit: {
+        name:'',
+        phone:'',
+        id: '',
+        city: ''
+      }
     }
   },
   methods: {
@@ -234,14 +294,40 @@ export default{
     },
 
     //更改单个数据状态
-    changeIsOn(id, status){
-      let on = 0;
-      status==1 ? on=0 : on=1;
+    changeIsOn(index){
+      if(this.tableData[index].is_on == 1){
+        this.leaveVisible = true;
+        this.currentIndex = index;
+      }else{
+        axios.put('/api/user', {
+            id: this.tableData[index].id,
+            is_on: 1
+        }).then(res=>{
+          if(res.data.code == '200'){
+            this.$message({
+              message: '更新成功',
+              type: 'success'
+            });
+            this.searchTable();
+          }
+        })
+      }
+    },
+
+    //写入离职日期
+    updateLeaveDate(){
       axios.put('/api/user', {
-          id: id,
-          is_on: on
+          id: this.tableData[this.currentIndex].id,
+          is_on: 0,
+          leave_date: this.leave_date,
+          leave_type: this.leave_type
       }).then(res=>{
         if(res.data.code == '200'){
+          this.leaveVisible = false;
+          this.$message({
+            message: '更新成功',
+            type: 'success'
+          });
           this.searchTable();
         }
       })
@@ -259,25 +345,45 @@ export default{
         this.btnLoading = false;
       });
     },
+    //修改数据
+    editUser(index){
+      this.currentIndex = index;
+      console.log(this.tableData);
+       this.edit.name = this.tableData[index].name;
+       this.edit.id = this.tableData[index].id;
+       this.edit.phone = this.tableData[index].phone;
+       this.edit.city = this.tableData[index].city.id;
+       this.editVisible = true;
+    },
+
+    //更新数据
+    editUserData(){
+      axios.put('/api/user_info', {
+        id: this.edit.id,
+        name: this.edit.name,
+        phone: this.edit.phone,
+        city: this.edit.city
+      })
+      .then(res=>{
+        if(res.data.code == '200'){
+          this.editVisible = false;
+          this.$message({
+            message: '更新成功',
+            type: 'success'
+          });
+          this.searchTable();
+        }
+      });
+    },
+
     searchByButton(){
-      //alert(this.condition.dateRange);
       this.condition.start = 0;
       this.searchTable();
       this.btnLoading = true;
     },
     searchByName(){
         this.condition.start = 0;
-        if(this.timer){
-          clearTimeout(this.timer);
-          this.timer = setTimeout(()=>{
-            this.searchTable();
-          }, 200);
-        }else{
-          this.timer = setTimeout(()=>{
-            clearTimeout(this.timer);
-          }, 200);
-        }
-
+        this.searchTable();
     },
     init(){
       //获取城市
@@ -328,19 +434,15 @@ export default{
           }
         })
         .then(res=>{
-          console.log(res);
-          this.$message({
-            message: '删除成功！',
-            type: 'success'
-          });
+          if(res.data.code == '200'){
+            this.$message({
+              message: '删除成功！',
+              type: 'success'
+            });
+            this.searchTable();        
+          }
         });
       })
-      // .catch(res=>{
-      //   this.$message({
-      //     message: '已取消删除',
-      //     type: 'info'
-      //   });
-      // })
     }
   },
   mounted(){
@@ -375,5 +477,9 @@ export default{
   height: 50px;
   display: flex;
   align-items: center;
+}
+.edit{
+  box-sizing: border-box;
+  padding:15px 30px;
 }
 </style>

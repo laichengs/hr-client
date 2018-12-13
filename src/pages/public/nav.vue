@@ -26,17 +26,17 @@ export default{
         },
         {
           iconType: 'el-icon-location',
-          link: 'user',
+          link: 'city',
           title: '城市管理'
         },
         {
           iconType: 'el-icon-rank',
-          link: 'user',
+          link: 'department',
           title: '部门管理'
         },
         {
           iconType: 'el-icon-printer',
-          link: 'user',
+          link: 'job',
           title: '职位管理'
         },
         {
