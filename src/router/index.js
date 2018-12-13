@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Router from 'vue-router'
+import Table from '@/pages/table/index'
 import Home from '@/pages/index/index'
 import User from '@/pages/user/index'
 import Department from '@/pages/department/index'
@@ -12,8 +13,8 @@ export default new Router({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: Home
+      name: 'table',
+      component: Table
     },
     {
       path: '/home',

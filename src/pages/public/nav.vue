@@ -15,6 +15,11 @@ export default{
       currentIndex: 0,
       navLists: [
         {
+          iconType: 'el-icon-picture',
+          link: '/',
+          title: '汇总信息'
+        },
+        {
           iconType: 'el-icon-date',
           link: 'home',
           title: '员工信息'
@@ -38,11 +43,6 @@ export default{
           iconType: 'el-icon-printer',
           link: 'job',
           title: '职位管理'
-        },
-        {
-          iconType: 'el-icon-news',
-          link: 'user',
-          title: '银行管理'
         }
       ]
     }
