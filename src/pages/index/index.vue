@@ -59,15 +59,20 @@
           </el-form-item>
         </el-col>
         <el-col :span="10">
-          <el-form-item>
-            <el-switch
+          <el-form-item label="选择在职状态" style="width:" size="small">
+            <!-- <el-switch
               v-model="condition.is_on"
               active-value=""
               @change="handleIsOn"
               inactive-value="1"
               active-text="全部显示"
               inactive-text="只显示在职">
-            </el-switch>
+            </el-switch> -->
+            <el-select v-model="condition.is_on"  @change="handleIsOn">
+              <el-option label="全部显示" value=""></el-option>
+              <el-option label="在职" value="1"></el-option>
+              <el-option label="离职" value="0"></el-option>
+            </el-select>
           </el-form-item>
         </el-col>
       </el-row>
@@ -80,7 +85,7 @@
         <template slot-scope="scope">
           <el-form label-position="left" inline class="demo-table-expand">
             <el-form-item label="转正时间">
-              <span>{{ scope.row.name }}</span>
+              <span>{{ scope.row.become_date }}</span>
             </el-form-item>
             <el-form-item label="民族">
               <span v-if="scope.row.nation == 1">汉族</span>
@@ -439,7 +444,7 @@ export default{
               message: '删除成功！',
               type: 'success'
             });
-            this.searchTable();        
+            this.searchTable();
           }
         });
       })

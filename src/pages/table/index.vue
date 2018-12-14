@@ -1,13 +1,13 @@
 <template>
   <div id="#app">
     <el-row :gutter="40">
-      <el-col :span="6" v-for="(item, index) in totals" v-key="index">
+      <el-col :span="6" v-for="(item, index) in totals" :key="index">
         <div class="box">
           <div class="box-top">
               <i :class="'iconfont icon-' + item.icon" :style="'font-size:40px;color:'+item.style"></i>
               <div class="title-box">
                   <h4 class="title">{{item.title}}</h4>
-                  <span class="num">300人</span>
+                  <span class="num">{{item.num}}人</span>
               </div>
           </div>
           <div class="describe-box">
@@ -16,9 +16,27 @@
         </div>
       </el-col>
     </el-row>
+    <div class="filterTime">
+      <el-date-picker
+        v-model="dateRange"
+        size="small"
+        type="daterange"
+        align="left"
+        unlink-panels
+        range-separator="至"
+        start-placeholder="开始日期"
+        end-placeholder="结束日期"
+        value-format="yyyy-MM-dd"
+        :picker-options="pickerOptions">
+      </el-date-picker>
+      <el-button type="primary" icon="el-icon-search" size="small" @click="filterData">按时间筛选</el-button>
+    </div>
     <el-table
       :data="tableData"
-      style="width: 100%;margin-top: 40px">
+      show-summary
+      border
+      size="small"
+      style="width: 100%;">
       <el-table-column
         prop="city"
         label="城市">
@@ -39,46 +57,116 @@
   </div>
 </template>
 <script>
+import axios from 'axios'
 export default{
   data(){
     return {
+      dateRange: '',
+      pickerOptions: {
+        shortcuts: [{
+          text: '最近一周',
+          onClick(picker) {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+            picker.$emit('pick', [start, end]);
+          }
+        }, {
+          text: '最近一个月',
+          onClick(picker) {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+            picker.$emit('pick', [start, end]);
+          }
+        }, {
+          text: '最近三个月',
+          onClick(picker) {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
+            picker.$emit('pick', [start, end]);
+          }
+        }]
+      },
       totals: [
         {
           title: '本月入职',
           describe: '本月总入职人数（包括离职）',
           icon: 'benyue',
-          style: '#409EFF'
+          style: '#409EFF',
+          num: '0'
         },
         {
           title: '本月离职',
           describe: '本月总离职人数',
           icon: 'benyue',
-          style: '#F56C6C'
+          style: '#F56C6C',
+          num: '0'
         },
         {
           title: '本周入职',
           describe: '本周总入职人数（包括离职）',
           icon: 'benzhou',
-          style: '#67C23A'
+          style: '#67C23A',
+          num: '0'
         },
         {
           title: '本周离职',
           describe: '本周总离职人数',
           icon: 'benzhou',
-          style: '#E6A23C'
+          style: '#E6A23C',
+          num: '0'
         },
       ],
       tableData: [
         {
           city: '深圳',
-          date: '2013-10-09',
           join_real: 3,
           join_total: 5,
           leave: 2
         }
-      ]
+      ],
+      nums: {}
     }
+  },
+  methods: {
+    init(){
+      //获取列表数据汇总
+      axios.get('/api/total')
+      .then(res=>{
+        for(var i=0; i<res.data.length; i++){
+          this.totals[i].num = res.data[i];
+        }
+      })
+
+      //获取城市数据
+      this.getTableData();
+    },
+
+    //获取城市具体数据
+    getTableData(){
+      axios.get('/api/table',{
+        params: {
+          dateRange: this.dateRange
+        }
+      }).then(res=>{
+        console.log(res);
+        if(res.data.code == '200'){
+          this.tableData = res.data.result;
+        }
+      })
+    },
+
+    //按时间筛选
+    filterData(){
+      this.getTableData();
+    }
+  },
+  mounted(){
+    this.init();
   }
+
 }
 </script>
 <style scoped>
@@ -101,8 +189,8 @@ export default{
 .title-box{
   text-align: right;
 }
-.title{
-
+.filterTime{
+  padding: 30px 0;
 }
 .num{
   font-size: 20px;
