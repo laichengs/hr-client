@@ -20,6 +20,11 @@ export default{
           title: '汇总信息'
         },
         {
+          iconType: 'el-icon-tickets',
+          link: 'register',
+          title: '登记信息'
+        },
+        {
           iconType: 'el-icon-date',
           link: 'home',
           title: '员工信息'

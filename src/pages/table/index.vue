@@ -36,6 +36,7 @@
       show-summary
       border
       size="small"
+      v-loading="loading"
       style="width: 100%;">
       <el-table-column
         prop="city"
@@ -127,7 +128,8 @@ export default{
           leave: 2
         }
       ],
-      nums: {}
+      nums: {},
+      loading: true
     }
   },
   methods: {
@@ -154,6 +156,7 @@ export default{
         console.log(res);
         if(res.data.code == '200'){
           this.tableData = res.data.result;
+          this.loading = false;
         }
       })
     },

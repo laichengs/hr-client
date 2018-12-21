@@ -5,6 +5,7 @@ import Home from '@/pages/index/index'
 import User from '@/pages/user/index'
 import Department from '@/pages/department/index'
 import Job from '@/pages/job/index'
+import Register from '@/pages/register'
 import City from '@/pages/city/index'
 
 Vue.use(Router)
@@ -40,6 +41,11 @@ export default new Router({
       path: '/job',
       name: 'job',
       component: Job
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: Register
     }
   ]
 })

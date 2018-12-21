@@ -61,7 +61,7 @@
         <el-col :span="10">
           <el-form-item label="选择在职状态" style="width:" size="small">
             <!-- <el-switch
-              v-model="condition.is_on"
+              v-model="condit+ion.is_on"
               active-value=""
               @change="handleIsOn"
               inactive-value="1"
