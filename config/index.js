@@ -51,7 +51,7 @@ module.exports = {
     // Paths
     assetsRoot: path.resolve(__dirname, '../dist'),
     assetsSubDirectory: 'static',
-    assetsPublicPath: 'https://minicdn.meijinguanjia.com/',
+    assetsPublicPath: 'https://cdn.lail.cn/',
 
     /**
      * Source Maps
